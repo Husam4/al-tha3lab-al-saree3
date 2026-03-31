@@ -119,7 +119,7 @@ export default function TypingGame() {
 
         {/* Prompt display */}
         <div className="bg-gray-900 rounded-xl p-6" dir="rtl">
-          <p className="text-lg leading-loose break-words select-none" style={{ fontFamily: '"Noto Naskh Arabic", "Amiri", "Traditional Arabic", serif' }}>
+          <p className="text-lg leading-loose break-words select-none" style={{ fontFamily: '"Tajawal", "Amiri", "Traditional Arabic", serif' }}>
             {prompt.text.split('').map((char, i) => {
               let className = 'text-gray-500'
               if (i < userInput.length) {
@@ -152,7 +152,7 @@ export default function TypingGame() {
             rows={3}
             placeholder="ابدأ الكتابة لبدء التحدي..."
             className="w-full bg-gray-900 border border-gray-700 rounded-xl p-4 text-base text-gray-100 placeholder-gray-600 resize-none focus:outline-none focus:border-blue-500 transition-colors"
-            style={{ fontFamily: '"Noto Naskh Arabic", "Amiri", "Traditional Arabic", serif' }}
+            style={{ fontFamily: '"Tajawal", "Amiri", "Traditional Arabic", serif' }}
           />
         ) : (
           <div className="bg-gray-900 border border-emerald-500/30 rounded-xl p-6 text-center space-y-4">
