@@ -118,8 +118,8 @@ export default function TypingGame() {
         </div>
 
         {/* Prompt display */}
-        <div className="bg-gray-900 rounded-xl p-6">
-          <p className="font-mono text-lg leading-relaxed tracking-wide break-words select-none">
+        <div className="bg-gray-900 rounded-xl p-6" dir="rtl">
+          <p className="text-lg leading-loose break-words select-none" style={{ fontFamily: '"Noto Naskh Arabic", "Amiri", "Traditional Arabic", serif' }}>
             {prompt.text.split('').map((char, i) => {
               let className = 'text-gray-500'
               if (i < userInput.length) {
@@ -144,12 +144,15 @@ export default function TypingGame() {
           <textarea
             ref={inputRef}
             autoFocus
+            dir="rtl"
+            lang="ar"
             value={userInput}
             onChange={handleInput}
             disabled={isFinished}
             rows={3}
-            placeholder="Start typing to begin the challenge..."
-            className="w-full bg-gray-900 border border-gray-700 rounded-xl p-4 font-mono text-base text-gray-100 placeholder-gray-600 resize-none focus:outline-none focus:border-blue-500 transition-colors"
+            placeholder="ابدأ الكتابة لبدء التحدي..."
+            className="w-full bg-gray-900 border border-gray-700 rounded-xl p-4 text-base text-gray-100 placeholder-gray-600 resize-none focus:outline-none focus:border-blue-500 transition-colors"
+            style={{ fontFamily: '"Noto Naskh Arabic", "Amiri", "Traditional Arabic", serif' }}
           />
         ) : (
           <div className="bg-gray-900 border border-emerald-500/30 rounded-xl p-6 text-center space-y-4">
