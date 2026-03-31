@@ -10,6 +10,8 @@ interface GameState {
   startTime: number | null
   errors: number
   isFinished: boolean
+  mistakeIndex: number | null
+  firstPassErrorCount: number
 }
 
 function getDailyPrompt(prompts: Prompt[]): Prompt {
@@ -42,6 +44,8 @@ export default function TypingGame() {
     startTime: null,
     errors: 0,
     isFinished: false,
+    mistakeIndex: null,
+    firstPassErrorCount: 0,
   })
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
@@ -55,7 +59,7 @@ export default function TypingGame() {
   }, [])
 
   const reset = useCallback(() => {
-    setState({ userInput: '', startTime: null, errors: 0, isFinished: false })
+    setState({ userInput: '', startTime: null, errors: 0, isFinished: false, mistakeIndex: null, firstPassErrorCount: 0 })
     setTimeout(() => inputRef.current?.focus(), 0)
   }, [])
 
@@ -67,13 +71,82 @@ export default function TypingGame() {
 
       setState((prev) => {
         const startTime = prev.startTime ?? now
-        // Count new errors: characters that don't match the prompt
-        let errors = 0
-        for (let i = 0; i < value.length; i++) {
-          if (value[i] !== prompt.text[i]) errors++
+        const prevMistakeIndex = prev.mistakeIndex
+        let errors = prev.errors
+        let firstPassErrorCount = prev.firstPassErrorCount
+
+        if (prevMistakeIndex !== null) {
+          // Do not allow deleting correct characters before mistake
+          if (value.length < prevMistakeIndex) {
+            return {
+              ...prev,
+              userInput: prev.userInput.slice(0, prevMistakeIndex),
+              startTime,
+            }
+          }
+
+          // While mistake is active, do not accept input after mistake index + 1
+          if (value.length > prevMistakeIndex + 1) {
+            return { ...prev, startTime }
+          }
+
+          // If the user is back to mistake index (removed mistake char), just set userInput
+          if (value.length === prevMistakeIndex) {
+            return { ...prev, userInput: value, startTime, isFinished: false }
+          }
+
+          // If user retyped at mistake position
+          const char = value[prevMistakeIndex]
+          const expected = prompt.text[prevMistakeIndex]
+          if (char !== expected) {
+            return { ...prev, userInput: value, startTime, isFinished: false }
+          }
+
+          // Mistake corrected at position; clear mistake and keep first-pass count unchanged
+          const newMistakeIndex = null
+          const isFinished = value.length >= prompt.text.length && value === prompt.text
+          return {
+            userInput: value,
+            startTime,
+            errors,
+            isFinished,
+            mistakeIndex: newMistakeIndex,
+            firstPassErrorCount,
+          }
         }
-        const isFinished = value.length >= prompt.text.length
-        return { userInput: value, startTime, errors, isFinished }
+
+        // No active mistake: evaluate new input for first mismatch
+        let expectedMistakeIndex: number | null = null
+        for (let i = 0; i < value.length; i++) {
+          if (value[i] !== prompt.text[i]) {
+            expectedMistakeIndex = i
+            break
+          }
+        }
+
+        if (expectedMistakeIndex !== null) {
+          errors += 1
+          firstPassErrorCount += 1
+          return {
+            userInput: value,
+            startTime,
+            errors,
+            isFinished: false,
+            mistakeIndex: expectedMistakeIndex,
+            firstPassErrorCount,
+          }
+        }
+
+        // Fully correct so far
+        const isFinished = value.length >= prompt.text.length && value === prompt.text
+        return {
+          userInput: value,
+          startTime,
+          errors,
+          isFinished,
+          mistakeIndex: null,
+          firstPassErrorCount,
+        }
       })
     },
     [prompt, state.isFinished],
@@ -87,9 +160,17 @@ export default function TypingGame() {
     )
   }
 
-  const { userInput, startTime, errors, isFinished } = state
+  const { userInput, startTime, errors, isFinished, mistakeIndex, firstPassErrorCount } = state
   const wpm = startTime && userInput.length > 0 ? calcWPM(userInput, startTime) : 0
-  const accuracy = calcAccuracy(userInput, prompt.text)
+  const atLeastMistakeLength = mistakeIndex !== null ? mistakeIndex + 1 : 0
+  const currentLength = Math.max(
+    1,
+    Math.min(prompt.text.length, Math.max(userInput.length, atLeastMistakeLength)),
+  )
+  const clampedErrors = Math.min(firstPassErrorCount, currentLength)
+  const accuracy = prompt
+    ? Math.round(((currentLength - clampedErrors) / currentLength) * 100)
+    : 100
   const today = new Date().toISOString().split('T')[0]
 
   return (
@@ -123,10 +204,20 @@ export default function TypingGame() {
             {prompt.text.split('').map((char, i) => {
               let className = 'text-gray-500'
               if (i < userInput.length) {
-                className =
-                  userInput[i] === char
-                    ? 'text-emerald-400'
-                    : 'text-rose-400 underline decoration-rose-500'
+                if (mistakeIndex !== null) {
+                  if (i < mistakeIndex) {
+                    className = 'text-emerald-400'
+                  } else if (i === mistakeIndex) {
+                    className = 'text-rose-400 underline decoration-rose-500'
+                  } else {
+                    className = 'text-gray-500'
+                  }
+                } else {
+                  className =
+                    userInput[i] === char
+                      ? 'text-emerald-400'
+                      : 'text-rose-400 underline decoration-rose-500'
+                }
               } else if (i === userInput.length) {
                 className = 'text-gray-100 border-b-2 border-blue-400'
               }
